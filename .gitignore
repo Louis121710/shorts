@@ -1,0 +1,12 @@
+node_modules/
+out/
+.whisper/
+public/inputs/
+.cache/
+uploads/
+samples/
+.render-public/
+.tools/
+*.zip
+public/*
+!public/.gitkeep

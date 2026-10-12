@@ -1,0 +1,32 @@
+{
+  "name": "shorts",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Automated TikTok/Shorts/Reels generator: local Whisper transcription + Remotion rendering",
+  "type": "module",
+  "scripts": {
+    "dev": "remotion studio src/index.ts",
+    "generate-short": "tsx scripts/generate-short.ts",
+    "transcribe": "tsx scripts/generate-short.ts --transcribe-only",
+    "typecheck": "tsc --noEmit",
+    "setup": "tsx scripts/setup.ts",
+    "ui": "tsx scripts/ui-server.ts"
+  },
+  "dependencies": {
+    "@remotion/captions": "4.0.534",
+    "@remotion/cli": "4.0.534",
+    "@remotion/google-fonts": "4.0.534",
+    "@remotion/install-whisper-cpp": "4.0.534",
+    "@remotion/media-utils": "4.0.534",
+    "@remotion/renderer": "4.0.534",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "remotion": "4.0.534"
+  },
+  "devDependencies": {
+    "@types/node": "22.18.0",
+    "@types/react": "19.2.2",
+    "tsx": "4.23.15",
+    "typescript": "5.9.3"
+  }
+}

@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shorts Generator</title>
+<style>
+  :root {
+    --bg: #0b0b10; --panel: #14141c; --line: #26263a; --text: #f2f2f7; --muted: #8b8ba3;
+    --accent: #FFE600; --danger: #ff5c5c; --ok: #4ade80;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 32px 20px 64px; }
+  h1 { font-size: 26px; margin: 0 0 4px; letter-spacing: -0.02em; }
+  .sub { color: var(--muted); margin: 0 0 28px; }
+  .grid { display: grid; grid-template-columns: 1fr 300px; gap: 24px; align-items: start; }
+  @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 20px; }
+  .card + .card { margin-top: 16px; }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 0 0 14px; font-weight: 600; }
+
+  #drop { border: 2px dashed var(--line); border-radius: 14px; padding: 40px 20px; text-align: center; cursor: pointer; transition: .15s; }
+  #drop:hover, #drop.over { border-color: var(--accent); background: rgba(255,230,0,.05); }
+  #drop .big { font-size: 17px; font-weight: 600; }
+  #drop .small { color: var(--muted); margin-top: 4px; }
+  #drop.has { border-style: solid; border-color: var(--ok); }
+  #bar-up { height: 4px; background: var(--line); border-radius: 2px; margin-top: 14px; overflow: hidden; display: none; }
+  #bar-up > div { height: 100%; width: 0; background: var(--accent); transition: width .1s; }
+
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+  label b { color: var(--text); font-weight: 600; float: right; }
+  select, input[type=text] { width: 100%; background: #0e0e15; color: var(--text); border: 1px solid var(--line); border-radius: 10px; padding: 9px 10px; font: inherit; }
+  input[type=range] { width: 100%; accent-color: var(--accent); }
+  input[type=color] { width: 100%; height: 38px; border: 1px solid var(--line); border-radius: 10px; background: #0e0e15; padding: 3px; }
+  .field { margin-bottom: 14px; }
+  .check { display: flex; align-items: center; gap: 8px; color: var(--text); font-size: 14px; margin: 0; cursor: pointer; }
+  .check input { accent-color: var(--accent); width: 16px; height: 16px; }
+  .hint { color: var(--muted); font-size: 12px; margin-top: 4px; }
+
+  button#go { width: 100%; margin-top: 18px; padding: 15px; font-size: 17px; font-weight: 700; border: 0; border-radius: 12px; background: var(--accent); color: #111; cursor: pointer; transition: .15s; }
+  button#go:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.05); }
+  button#go:disabled { background: var(--line); color: var(--muted); cursor: not-allowed; }
+  button.ghost { background: transparent; border: 1px solid var(--line); color: var(--text); border-radius: 10px; padding: 9px 14px; cursor: pointer; font: inherit; }
+  button.ghost:hover { border-color: var(--accent); }
+
+  /* live caption preview */
+  .phone { width: 100%; aspect-ratio: 9/16; background: linear-gradient(160deg,#1d3557,#0b0b10); border-radius: 20px; position: relative; overflow: hidden; border: 1px solid var(--line); container-type: inline-size; }
+  .phone::before, .phone::after { content: ""; position: absolute; left: 0; right: 0; pointer-events: none; }
+  .phone::before { top: 0; height: 24%; background: linear-gradient(rgba(0,0,0,.6), transparent); }
+  .phone::after { bottom: 0; height: 55%; background: linear-gradient(0deg, rgba(0,0,0,.75), transparent); }
+  #cap { position: absolute; left: 5%; right: 5%; transform: translateY(-50%); text-align: center; font-weight: 900; font-family: "Montserrat", Impact, "Arial Black", sans-serif; z-index: 2; line-height: 1.1; }
+  #cap span { display: inline-block; margin: 0 .14em; color: #fff; -webkit-text-stroke: .16em #000; paint-order: stroke fill; text-shadow: 0 .08em 0 #000; }
+  #cap span.on { color: var(--accent); transform: scale(1.15) rotate(-2deg); text-shadow: 0 .08em 0 #000, 0 0 .35em color-mix(in srgb, var(--accent) 45%, transparent); }
+  .pbar { position: absolute; left: 0; right: 0; bottom: 0; height: 1.1%; background: rgba(255,255,255,.18); z-index: 2; }
+  .pbar i { display: block; height: 100%; width: 38%; background: var(--accent); }
+
+  /* progress / result */
+  #run { display: none; }
+  .steps { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+  .step { font-size: 12px; padding: 4px 10px; border-radius: 99px; border: 1px solid var(--line); color: var(--muted); }
+  .step.active { border-color: var(--accent); color: var(--accent); }
+  .step.done { border-color: var(--ok); color: var(--ok); }
+  #bar { height: 10px; background: var(--line); border-radius: 5px; overflow: hidden; }
+  #bar > div { height: 100%; width: 0; background: var(--accent); transition: width .3s; }
+  #status { margin: 10px 0 0; color: var(--muted); display: flex; justify-content: space-between; gap: 10px; }
+  details { margin-top: 12px; color: var(--muted); }
+  pre { background: #0e0e15; border-radius: 10px; padding: 10px; max-height: 180px; overflow: auto; font-size: 12px; white-space: pre-wrap; margin: 8px 0 0; }
+  #result { display: none; margin-top: 16px; }
+  #result video { width: 100%; max-width: 300px; border-radius: 14px; background: #000; display: block; margin: 0 auto 14px; }
+  .btns { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  .btns a { text-decoration: none; }
+  #err { color: var(--danger); margin-top: 12px; display: none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Shorts Generator</h1>
+  <p class="sub">Drop a video, pick your style, press Generate. Everything runs locally on your machine.</p>
+
+  <div class="grid">
+    <div>
+      <div class="card">
+        <h2>1 · Video</h2>
+        <label for="url">Paste a YouTube link (downloads in HD with audio)</label>
+        <div style="display:flex;gap:8px;margin-bottom:6px">
+          <input id="url" type="text" placeholder="https://www.youtube.com/watch?v=…" autocomplete="off" spellcheck="false">
+          <button class="ghost" id="clear-url" type="button" style="display:none">✕</button>
+        </div>
+        <div id="login-row" style="display:none;margin-bottom:10px">
+          <label for="cookies">Browser login (only needed if YouTube says "confirm you're not a bot")</label>
+          <select id="cookies">
+            <option value="">None: don't use any login</option>
+            <option value="firefox">Firefox (most reliable)</option>
+            <option value="chrome">Chrome (close it first)</option>
+            <option value="edge">Edge (close it first)</option>
+            <option value="brave">Brave (close it first)</option>
+          </select>
+          <div class="hint">Uses your signed-in YouTube session from that browser, read locally and only sent to YouTube. Without it, some videos are limited to 360p.</div>
+        </div>
+        <div id="clip-row" style="display:none;margin-bottom:6px">
+          <label for="clip">Only use part of the video (optional)</label>
+          <input id="clip" type="text" placeholder="e.g. 1:20-2:10   (start-end, leave empty for the whole video)" autocomplete="off">
+        </div>
+        <div class="hint" style="margin-bottom:14px">Only download videos you own or have permission to use.</div>
+        <div style="text-align:center;color:var(--muted);font-size:12px;margin:0 0 12px">— or upload a file —</div>
+        <div id="drop">
+          <div class="big" id="drop-title">Drag &amp; drop your video here</div>
+          <div class="small" id="drop-sub">or click to browse · mp4, mov, webm, mkv, mp3, wav…</div>
+        </div>
+        <input id="file" type="file" accept="video/*,audio/*,.mkv,.m4a" hidden>
+        <div id="bar-up"><div></div></div>
+      </div>
+
+      <div class="card">
+        <h2>2 · Options</h2>
+        <div class="row">
+          <div class="field">
+            <label for="model">Whisper model</label>
+            <select id="model">
+              <option value="tiny.en">tiny.en: fastest</option>
+              <option value="base.en" selected>base.en: balanced (default)</option>
+              <option value="small.en">small.en: more accurate</option>
+              <option value="medium.en">medium.en: best, slow</option>
+              <option value="base">base: multilingual</option>
+              <option value="small">small: multilingual</option>
+            </select>
+            <div class="hint">Bigger models download once on first use.</div>
+          </div>
+          <div class="field">
+            <label for="language">Spoken language</label>
+            <select id="language">
+              <option value="en" selected>English</option><option value="es">Spanish</option><option value="fr">French</option>
+              <option value="de">German</option><option value="pt">Portuguese</option><option value="it">Italian</option>
+              <option value="nl">Dutch</option><option value="ja">Japanese</option><option value="zh">Chinese</option>
+              <option value="hi">Hindi</option><option value="ar">Arabic</option><option value="ru">Russian</option>
+            </select>
+            <div class="hint">Non-English needs a multilingual model (no .en).</div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="field"><label for="wpc">Words per caption <b id="wpc-v">3</b></label><input id="wpc" type="range" min="1" max="5" step="1" value="3"></div>
+          <div class="field"><label for="punch">Camera punch-in <b id="punch-v">1.10×</b></label><input id="punch" type="range" min="0" max="0.15" step="0.01" value="0.10"></div>
+        </div>
+        <div class="row">
+          <div class="field"><label for="fs">Font size <b id="fs-v">104</b></label><input id="fs" type="range" min="60" max="150" step="2" value="104"></div>
+          <div class="field"><label for="pos">Caption height <b id="pos-v">60%</b></label><input id="pos" type="range" min="0.3" max="0.85" step="0.01" value="0.6"></div>
+        </div>
+        <div class="row">
+          <div class="field"><label for="color">Highlight colour</label><input id="color" type="color" value="#ffe600"></div>
+          <div class="field" style="align-self:end"><label class="check"><input id="upper" type="checkbox" checked> UPPERCASE captions</label></div>
+        </div>
+        <div class="field"><label class="check"><input id="retx" type="checkbox"> Re-transcribe (ignore saved transcript)</label></div>
+      </div>
+
+      <button id="go" disabled>Generate Short</button>
+
+      <div class="card" id="run">
+        <h2>3 · Progress</h2>
+        <div class="steps"><span class="step" data-s="download">Download</span><span class="step" data-s="setup">Setup</span><span class="step" data-s="transcribe">Transcribe</span><span class="step" data-s="bundle">Prepare</span><span class="step" data-s="render">Render</span></div>
+        <div id="bar"><div></div></div>
+        <p id="status"><span id="status-text">Starting…</span><button class="ghost" id="cancel" style="padding:4px 10px">Cancel</button></p>
+        <div id="err"></div>
+        <details><summary>Details</summary><pre id="log"></pre></details>
+        <div id="result">
+          <video id="vid" controls playsinline></video>
+          <div class="btns">
+            <a id="dl" class="ghost-link"><button class="ghost" type="button">⬇ Download MP4</button></a>
+            <button class="ghost" id="again" type="button">Make another</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="position:sticky;top:20px">
+      <div class="card">
+        <h2>Caption preview</h2>
+        <div class="phone" id="phone">
+          <div id="cap"><span>This</span><span class="on">is</span><span>how</span></div>
+          <div class="pbar"><i></i></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+let uploaded = null, jobId = null, es = null;
+
+/* ---------- live preview ---------- */
+function preview() {
+  const fs = +$("fs").value, pos = +$("pos").value, color = $("color").value;
+  const phone = $("phone"), cap = $("cap");
+  document.documentElement.style.setProperty("--accent", color);
+  cap.style.fontSize = (fs / 1080 * 100) + "cqw";
+  cap.style.top = (pos * 100) + "%";
+  cap.style.textTransform = $("upper").checked ? "uppercase" : "none";
+  $("wpc-v").textContent = $("wpc").value;
+  $("punch-v").textContent = (1 + +$("punch").value).toFixed(2) + "×";
+  $("fs-v").textContent = fs;
+  $("pos-v").textContent = Math.round(pos * 100) + "%";
+  const words = ["This", "is", "how", "it", "looks"].slice(0, +$("wpc").value);
+  const act = Math.min(1, words.length - 1);
+  cap.innerHTML = words.map((w, i) => `<span class="${i === act ? "on" : ""}">${w}</span>`).join("");
+}
+["fs", "pos", "color", "upper", "wpc", "punch"].forEach((id) => $(id).addEventListener("input", preview));
+preview();
+
+/* keep language/model consistent */
+$("language").addEventListener("change", () => {
+  const m = $("model");
+  if ($("language").value !== "en" && m.value.endsWith(".en")) m.value = m.value.replace(".en", "");
+});
+
+/* ---------- source selection ---------- */
+try { $("cookies").value = localStorage.getItem("cookies") || ""; } catch {}
+$("cookies").addEventListener("change", () => { try { localStorage.setItem("cookies", $("cookies").value); } catch {} });
+const isLink = () => /^https?:\/\/\S+$/i.test($("url").value.trim());
+function refreshGo() { $("go").disabled = !(isLink() || uploaded); $("clear-url").style.display = $("url").value ? "" : "none"; $("clip-row").style.display = $("login-row").style.display = isLink() ? "block" : "none"; }
+$("url").addEventListener("input", refreshGo);
+$("clear-url").addEventListener("click", () => { $("url").value = ""; refreshGo(); });
+
+/* ---------- upload ---------- */
+const drop = $("drop"), input = $("file");
+drop.addEventListener("click", () => input.click());
+input.addEventListener("change", () => input.files[0] && upload(input.files[0]));
+["dragenter", "dragover"].forEach((e) => drop.addEventListener(e, (ev) => { ev.preventDefault(); drop.classList.add("over"); }));
+["dragleave", "drop"].forEach((e) => drop.addEventListener(e, (ev) => { ev.preventDefault(); drop.classList.remove("over"); }));
+drop.addEventListener("drop", (ev) => ev.dataTransfer.files[0] && upload(ev.dataTransfer.files[0]));
+// Dropping anywhere else on the page shouldn't navigate away to the file.
+["dragover", "drop"].forEach((e) => window.addEventListener(e, (ev) => ev.preventDefault()));
+
+function upload(file) {
+  uploaded = null; refreshGo(); drop.classList.remove("has");
+  $("drop-title").textContent = file.name;
+  $("drop-sub").textContent = "Uploading…";
+  $("bar-up").style.display = "block";
+  const xhr = new XMLHttpRequest();
+  xhr.open("PUT", "/upload?name=" + encodeURIComponent(file.name));
+  xhr.upload.onprogress = (e) => { if (e.lengthComputable) $("bar-up").firstElementChild.style.width = (e.loaded / e.total * 100) + "%"; };
+  xhr.onload = () => {
+    if (xhr.status !== 200) { $("drop-sub").textContent = "Upload failed"; return; }
+    const info = JSON.parse(xhr.responseText);
+    $("bar-up").style.display = "none";
+    const mb = (file.size / 1048576).toFixed(1) + " MB";
+    if (!info.hasAudio) {
+      $("drop-sub").innerHTML = `<span style="color:var(--danger)">✖ This file has no audio track, so there's nothing to transcribe. It looks like a video-only download. Get a version with sound and drop it here.</span>`;
+      return;
+    }
+    uploaded = info.file;
+    drop.classList.add("has");
+    let msg = mb + " ready · click to choose a different file";
+    if (info.duration > 180) msg += `<br><span style="color:#ffb454">⚠ ${(info.duration / 60).toFixed(1)} min long. Shorts are usually under 3 min, and rendering will be slow.</span>`;
+    $("drop-sub").innerHTML = msg;
+    refreshGo();
+  };
+  xhr.onerror = () => { $("drop-sub").textContent = "Upload failed"; };
+  xhr.send(file);
+}
+
+/* ---------- generate ---------- */
+$("go").addEventListener("click", async () => {
+  const link = isLink() ? $("url").value.trim() : null;
+  if (!link && !uploaded) return;
+  $("go").disabled = true;
+  $("run").style.display = "block"; $("result").style.display = "none"; $("err").style.display = "none";
+  $("cancel").style.display = ""; $("log").textContent = ""; setProgress(0, "Starting…"); setStep(link ? "download" : "setup");
+  $("run").scrollIntoView({ behavior: "smooth" });
+
+  const options = {
+    model: $("model").value, language: $("language").value,
+    "words-per-chunk": $("wpc").value, punch: $("punch").value,
+    "font-size": $("fs").value, position: $("pos").value,
+    "active-color": $("color").value, uppercase: String($("upper").checked),
+    ...($("retx").checked ? { retranscribe: true } : {}),
+    ...(link && $("clip").value.trim() ? { clip: $("clip").value.trim() } : {}),
+    ...(link && $("cookies").value ? { "cookies-browser": $("cookies").value } : {}),
+  };
+  const r = await fetch("/generate", { method: "POST", body: JSON.stringify(link ? { url: link, options } : { file: uploaded, options }) });
+  if (!r.ok) { fail(await r.text()); return; }
+  jobId = (await r.json()).id;
+  es = new EventSource("/events/" + jobId);
+  es.addEventListener("log", (e) => onLog(JSON.parse(e.data)));
+  es.addEventListener("done", (e) => { es.close(); onDone(JSON.parse(e.data)); });
+});
+
+$("cancel").addEventListener("click", () => { if (jobId) fetch("/cancel/" + jobId, { method: "POST" }); });
+$("again").addEventListener("click", () => { $("run").style.display = "none"; refreshGo(); window.scrollTo({ top: 0, behavior: "smooth" }); });
+
+const STEPS = ["download", "setup", "transcribe", "bundle", "render"];
+function setStep(s) {
+  const i = STEPS.indexOf(s);
+  document.querySelectorAll(".step").forEach((el) => {
+    const j = STEPS.indexOf(el.dataset.s);
+    el.className = "step" + (j < i ? " done" : j === i ? " active" : "");
+  });
+}
+function setProgress(pct, text) { $("bar").firstElementChild.style.width = pct + "%"; if (text) $("status-text").textContent = text; }
+
+function onLog(line) {
+  const log = $("log"); log.textContent += line + "\n"; log.scrollTop = log.scrollHeight;
+  let m;
+  if ((m = /downloading video (\d+)%/.exec(line))) { setStep("download"); setProgress(m[1] * 0.06, `Downloading video… ${m[1]}%`); }
+  else if (/Downloading .*yt-dlp/.test(line)) { setStep("download"); setProgress(1, "Fetching downloader (first time only)…"); }
+  else if (/^Downloaded →/.test(line)) { setStep("setup"); setProgress(6, "Download complete"); }
+  else if ((m = /transcribing (\d+)%/.exec(line))) { setStep("transcribe"); setProgress(8 + m[1] * 0.27, `Transcribing speech… ${m[1]}%`); }
+  else if (/model download (\d+)%/.test(line)) { setStep("setup"); setProgress(4, "Downloading Whisper model (first run only)…"); }
+  else if (/Extracting/.test(line)) { setStep("transcribe"); setProgress(7, "Extracting audio…"); }
+  else if (/Transcribing with/.test(line)) { setStep("transcribe"); setProgress(8, "Transcribing speech…"); }
+  else if (/Reusing cached transcript/.test(line)) { setStep("bundle"); setProgress(35, "Using saved transcript…"); }
+  else if (/Transcript:/.test(line)) { setStep("bundle"); setProgress(36, "Transcript ready"); }
+  else if ((m = /Bundling (\d+)%/.exec(line))) { setStep("bundle"); setProgress(36 + m[1] * 0.06, "Preparing video… " + m[1] + "%"); }
+  else if ((m = /Rendered (\d+)\/(\d+)/.exec(line))) { setStep("render"); setProgress(42 + (m[1] / m[2]) * 56, `Rendering frames… ${m[1]}/${m[2]}` + ((t = /time remaining: (\S+)/.exec(line)) ? ` · ~${t[1]} left` : "")); }
+  else if (/Encoded/.test(line)) { setStep("render"); setProgress(99, "Encoding video…"); }
+}
+let t;
+
+function onDone({ output, error }) {
+  if (error || !output) return fail(error || "Failed");
+  setStep("none"); document.querySelectorAll(".step").forEach((s) => (s.className = "step done"));
+  setProgress(100, "Done!");
+  $("vid").src = "/video/" + encodeURIComponent(output);
+  $("dl").href = "/video/" + encodeURIComponent(output) + "?download=1";
+  $("result").style.display = "block";
+  $("cancel").style.display = "none";
+  refreshGo();
+  $("result").scrollIntoView({ behavior: "smooth" });
+}
+function fail(msg) {
+  $("err").textContent = "✖ " + msg; $("err").style.display = "block";
+  refreshGo(); setProgress(0, "Failed");
+}
+</script>
+</body>
+</html>
